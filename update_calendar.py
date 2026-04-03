@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from icalendar import Calendar, Event
 
 # --- [설정] ---
-# 환경 변수(GitHub Secrets)에서 값을 가져오고, 없으면 뒷쪽의 기본값을 사용합니다.
+# GitHub Secrets에서 설정한 값을 그대로 가져옵니다.
+# (Secrets에 해당 이름이 없으면 None을 반환하며, NX/NY는 정수로 변환합니다)
 NX = int(os.environ.get('KMA_NX'))
 NY = int(os.environ.get('KMA_NY'))
 LOCATION_NAME = os.environ.get('LOCATION_NAME')
