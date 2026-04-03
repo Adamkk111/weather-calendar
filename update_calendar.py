@@ -54,19 +54,17 @@ def main():
                 old_cal = Calendar.from_ical(f.read())
                 for event in old_cal.walk('VEVENT'):
                     start_dt = event.get('dtstart').dt
-                    # datetime 객체일 경우 date로 변환
                     if isinstance(start_dt, datetime): start_dt = start_dt.date()
-                    # 오늘 기준 4일차 이후 데이터만 백업
                     if start_dt >= (now + timedelta(days=4)).date():
                         old_mid_events.append(event)
         except:
             has_old_file = False
 
     # --- [2. 데이터 수집 판단] ---
-    # 파일이 없거나, 정해진 업데이트 시간이면 API 호출 / 아니면 백업 사용
-    should_fetch_mid = True
+    # 🌟 현재 강제 업데이트를 위해 True로 설정함 (나중에 원복 필요)
+    should_fetch_mid = True 
 
-    # --- [3. 단기 예보 수집] (항상 실행) ---
+    # --- [3. 단기 예보 수집] ---
     base_date = now.strftime('%Y%m%d')
     base_h = max([h for h in [2, 5, 8, 11, 14, 17, 20, 23] if h <= now.hour], default=2)
     base_time = f"{base_h:02d}00"
@@ -86,7 +84,9 @@ def main():
     mid_map = {}
     if should_fetch_mid:
         print("📢 중기 예보를 새로 불러옵니다.")
-        tm_fc = now.strftime('%Y%m%d') + ("0600" if now.hour < 12 else "1800")
+        # 🌟 현재 시간(12시)에도 데이터가 있는 '0600'분으로 임시 고정
+        tm_fc = now.strftime('%Y%m%d') + "0600" 
+        
         url_mid_temp = f"https://apihub.kma.go.kr/api/typ02/openApi/MidFcstInfoService/getMidTa?dataType=JSON&regId={REG_ID_TEMP}&tmFc={tm_fc}&authKey={API_KEY}"
         url_mid_land = f"https://apihub.kma.go.kr/api/typ02/openApi/MidFcstInfoService/getMidLandFcst?dataType=JSON&regId={REG_ID_LAND}&tmFc={tm_fc}&authKey={API_KEY}"
         
@@ -97,7 +97,7 @@ def main():
             try:
                 t_item = t_res['response']['body']['items']['item'][0]
                 l_item = l_res['response']['body']['items']['item'][0]
-                for i in range(4, 11):
+                for i in range(3, 11): # 3일차부터 10일차까지 수집
                     d_str = (now + timedelta(days=i)).strftime('%Y%m%d')
                     if i <= 7:
                         mid_map[d_str] = {
@@ -111,8 +111,6 @@ def main():
                             'wf': l_item.get(f'wf{i}'), 'rn': l_item.get(f'rnSt{i}')
                         }
             except: pass
-    else:
-        print("📦 기존 중기 데이터를 재사용합니다.")
 
     # --- [5. 최종 ICS 구성] ---
     # 단기 생성 (0~3일)
@@ -145,6 +143,10 @@ def main():
     # 중기 생성 (4~10일)
     if should_fetch_mid and mid_map:
         for d_str, m in mid_map.items():
+            # 이미 단기 예보로 생성된 날짜(0~3일)는 건너뜀
+            if d_str in [ (now + timedelta(days=x)).strftime('%Y%m%d') for x in range(4) ]:
+                continue
+            
             event = Event()
             target_dt = datetime.strptime(d_str, '%Y%m%d')
             rep_wf = m.get('wf_pm') or m.get('wf')
