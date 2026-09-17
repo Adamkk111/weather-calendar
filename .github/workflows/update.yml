@@ -145,7 +145,6 @@ jobs:
             VERDICT="❌ 실패"
             if [ "$OUTCOME" = "success" ] && [ "$HAS_ICS" = "true" ] && [ -f "$DIR/weather.ics" ]; then
               VERDICT="✅ 성공"
-              # 모든 성공 결과는 같은 검증을 통과했으므로 첫 성공 결과를 선택합니다.
               if [ -z "$SELECTED_DIR" ]; then
                 SELECTED_DIR="$DIR"
                 SELECTED_ATTEMPT="$ATTEMPT"
@@ -169,19 +168,40 @@ jobs:
 
       - name: Commit and push weather.ics
         if: steps.select.outputs.can_commit == 'true'
+        shell: bash
         run: |
-          if git diff --quiet -- weather.ics; then
-            echo "No changes to commit"
-            exit 0
-          fi
+          # 선택된 결과는 임시 위치에 보관한 뒤, 항상 최신 main 위에 다시 적용합니다.
+          # 이전 워크플로가 그 사이 weather.ics를 커밋해도 rebase 충돌이 나지 않습니다.
+          cp weather.ics /tmp/selected-weather.ics
 
-          KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S')
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add weather.ics
-          git commit -m "Update weather.ics [$KST_TIME KST]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          for PUSH_ATTEMPT in 1 2 3; do
+            echo "[PUSH] attempt $PUSH_ATTEMPT/3"
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/selected-weather.ics weather.ics
+
+            if git diff --quiet -- weather.ics; then
+              echo "No changes to commit"
+              exit 0
+            fi
+
+            KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S')
+            git add weather.ics
+            git commit -m "Update weather.ics [$KST_TIME KST]"
+
+            if git push origin HEAD:main; then
+              echo "weather.ics push succeeded"
+              exit 0
+            fi
+
+            echo "::warning::main이 다시 변경되어 push가 거부되었습니다. 최신 main 기준으로 재시도합니다."
+          done
+
+          echo "::error::3번 재시도 후에도 weather.ics를 push하지 못했습니다."
+          exit 1
 
       - name: Fail safely if every runner failed
         if: steps.select.outputs.can_commit != 'true'
