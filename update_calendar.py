@@ -61,7 +61,7 @@ def get_mid_emoji(weather):
     return "🌡️"
 
 
-def fetch_api(endpoint, params, retries=2, timeout=15):
+def fetch_api(endpoint, params, retries=1, timeout=10):
     safe_params = {**params, "authKey": "***"}
     last_error = "unknown error"
     for attempt in range(1, retries + 1):
