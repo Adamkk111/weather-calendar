@@ -2,38 +2,45 @@ name: Update Weather ICS
 
 on:
   schedule:
+    # GitHub cron은 UTC 기준: KST 02:15, 05:15, 08:15, 11:15,
+    # 14:15, 17:15, 20:15, 23:15에 실행됩니다.
     - cron: '15 17,20,23,2,5,8,11,14 * * *'
   push:
-    paths:
-      - 'update_calendar.py'
     branches:
       - main
+    paths:
+      - 'update_calendar.py'
+      - 'requirements.txt'
   workflow_dispatch:
 
+# weather.ics 커밋에 필요한 최소 권한만 사용합니다.
 permissions:
   contents: write
-  pages: write
-  id-token: write
+
+# 예약 실행과 수동 실행이 겹쳐 같은 파일을 동시에 갱신하지 않도록 합니다.
+concurrency:
+  group: weather-calendar-update
+  cancel-in-progress: false
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
-    # 🌟 여기에 위치시켜 보겠습니다.
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    timeout-minutes: 10
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install requests pytz icalendar
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Run update script
+      - name: Update weather calendar
         env:
           KMA_API_KEY: ${{ secrets.KMA_API_KEY }}
           KMA_NX: ${{ secrets.KMA_NX }}
@@ -42,17 +49,19 @@ jobs:
           REG_ID_TEMP: ${{ secrets.REG_ID_TEMP }}
           REG_ID_LAND: ${{ secrets.REG_ID_LAND }}
           TZ: Asia/Seoul
-        run: python update_calendar.py
+        run: python -u update_calendar.py
 
-      - name: Commit and Push changes
+      - name: Commit and push weather.ics
         run: |
-          KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S')
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add weather.ics
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Update weather.ics [$KST_TIME KST]"
-            git push
-          else
+          if git diff --quiet -- weather.ics; then
             echo "No changes to commit"
+            exit 0
           fi
+
+          KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add weather.ics
+          git commit -m "Update weather.ics [$KST_TIME KST]"
+          git pull --rebase origin main
+          git push origin HEAD:main
