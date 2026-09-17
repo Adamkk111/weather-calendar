@@ -1,70 +1,155 @@
 BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Adamkk111//KMA Weather Calendar//KO
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
 X-WR-CALNAME:기상청 날씨
 X-WR-TIMEZONE:Asia/Seoul
 BEGIN:VEVENT
-SUMMARY:☀️ 21°C/22°C
+SUMMARY:☁️ 21°C/22°C
 DTSTART;VALUE=DATE:20260917
 DTEND;VALUE=DATE:20260918
-UID:20260917@short
+UID:20260917@short-summary
+DESCRIPTION:[21시] ☁️ 흐림 22°C (💧60% 🚩2.2m/s)\n[22시] ☁
+ ️ 흐림 21°C (💧65% 🚩2m/s)\n[23시] ☀️ 맑음 21°C (💧70% 
+ 🚩1.5m/s)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:☁️ 18°C/28°C
 DTSTART;VALUE=DATE:20260918
 DTEND;VALUE=DATE:20260919
-UID:20260918@short
+UID:20260918@short-summary
+DESCRIPTION:[00시] ⛅ 구름많음 20°C (💧70% 🚩1.3m/s)\n[01시] 
+ ☁️ 흐림 20°C (💧75% 🚩1.3m/s)\n[02시] ☁️ 흐림 20°C (
+ 💧75% 🚩1.2m/s)\n[03시] ☁️ 흐림 19°C (💧75% 🚩1.2m/s)\n[04
+ 시] ☁️ 흐림 19°C (💧80% 🚩1m/s)\n[05시] ⛅ 구름많음 18°
+ C (💧80% 🚩1.2m/s)\n[06시] ☁️ 흐림 18°C (💧80% 🚩1.8m/s)\n
+ [07시] ☁️ 흐림 19°C (💧80% 🚩2m/s)\n[08시] ☁️ 흐림 20°
+ C (💧80% 🚩2.5m/s)\n[09시] ☁️ 흐림 22°C (💧75% 🚩2.5m/s)\n
+ [10시] ☁️ 흐림 24°C (💧70% 🚩2.5m/s)\n[11시] ☁️ 흐림 25
+ °C (💧65% 🚩2m/s)\n[12시] ☁️ 흐림 26°C (💧60% 🚩1.9m/s)\n
+ [13시] ☁️ 흐림 27°C (💧55% 🚩2m/s)\n[14시] ⛅ 구름많음 2
+ 8°C (💧55% 🚩2.5m/s)\n[15시] ⛅ 구름많음 28°C (💧55% 🚩3.1
+ m/s)\n[16시] ⛅ 구름많음 27°C (💧55% 🚩2.5m/s)\n[17시] ⛅ 구
+ 름많음 26°C (💧55% 🚩2m/s)\n[18시] ☀️ 맑음 25°C (💧60% 
+ 🚩2m/s)\n[19시] ☀️ 맑음 23°C (💧65% 🚩2.2m/s)\n[20시] ☀
+ ️ 맑음 22°C (💧70% 🚩2.3m/s)\n[21시] ☀️ 맑음 21°C (💧75
+ % 🚩2.1m/s)\n[22시] ☀️ 맑음 20°C (💧80% 🚩1.5m/s)\n[23시] 
+ ☀️ 맑음 20°C (💧80% 🚩1m/s)\n\n최종 업데이트: 2026-09-17 
+ 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:☀️ 18°C/29°C
 DTSTART;VALUE=DATE:20260919
 DTEND;VALUE=DATE:20260920
-UID:20260919@short
+UID:20260919@short-summary
+DESCRIPTION:[00시] ☀️ 맑음 19°C (💧85% 🚩0.9m/s)\n[01시] ☀
+ ️ 맑음 19°C (💧85% 🚩0.7m/s)\n[02시] ☀️ 맑음 18°C (💧85
+ % 🚩0.9m/s)\n[03시] ☀️ 맑음 18°C (💧90% 🚩1m/s)\n[04시] ☀
+ ️ 맑음 18°C (💧90% 🚩1m/s)\n[05시] ☀️ 맑음 18°C (💧90% 
+ 🚩1m/s)\n[06시] ☀️ 맑음 18°C (💧90% 🚩1m/s)\n[07시] ☀️ 
+ 맑음 18°C (💧85% 🚩1m/s)\n[08시] ☀️ 맑음 20°C (💧80% 🚩
+ 1.7m/s)\n[09시] ☀️ 맑음 22°C (💧70% 🚩2.2m/s)\n[10시] ☀️ 
+ 맑음 24°C (💧65% 🚩2.5m/s)\n[11시] ☀️ 맑음 25°C (💧60% 
+ 🚩2.4m/s)\n[12시] ☀️ 맑음 27°C (💧60% 🚩2.6m/s)\n[13시] ☀
+ ️ 맑음 28°C (💧55% 🚩2.9m/s)\n[14시] ☀️ 맑음 28°C (💧55
+ % 🚩3.3m/s)\n[15시] ☀️ 맑음 29°C (💧55% 🚩3.2m/s)\n[16시] 
+ ☀️ 맑음 28°C (💧55% 🚩2.9m/s)\n[17시] ☀️ 맑음 27°C (
+ 💧55% 🚩2.4m/s)\n[18시] ☀️ 맑음 25°C (💧60% 🚩1.9m/s)\n[19
+ 시] ☀️ 맑음 23°C (💧70% 🚩1.6m/s)\n[20시] ☀️ 맑음 22°C
+  (💧75% 🚩1.6m/s)\n[21시] ☀️ 맑음 21°C (💧75% 🚩1.5m/s)\n[
+ 22시] ☀️ 맑음 21°C (💧75% 🚩1.5m/s)\n[23시] ☀️ 맑음 20
+ °C (💧80% 🚩1.5m/s)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:⛅ 17°C/28°C
 DTSTART;VALUE=DATE:20260920
 DTEND;VALUE=DATE:20260921
-UID:20260920@short
+UID:20260920@short-summary
+DESCRIPTION:[00시] ☀️ 맑음 20°C (💧80% 🚩1.5m/s)\n[01시] ☀
+ ️ 맑음 19°C (💧85% 🚩1.5m/s)\n[02시] ☀️ 맑음 19°C (💧85
+ % 🚩1.5m/s)\n[03시] ☀️ 맑음 18°C (💧85% 🚩1.5m/s)\n[04시] 
+ ☀️ 맑음 18°C (💧85% 🚩1.5m/s)\n[05시] ☀️ 맑음 17°C (
+ 💧85% 🚩1.4m/s)\n[06시] ☀️ 맑음 17°C (💧85% 🚩1.2m/s)\n[07
+ 시] ☀️ 맑음 17°C (💧85% 🚩1.5m/s)\n[08시] ☀️ 맑음 19°C
+  (💧80% 🚩1.8m/s)\n[09시] ☀️ 맑음 22°C (💧70% 🚩2m/s)\n[10
+ 시] ☀️ 맑음 24°C (💧60% 🚩2.4m/s)\n[11시] ☀️ 맑음 25°C
+  (💧55% 🚩2.3m/s)\n[12시] ⛅ 구름많음 26°C (💧50% 🚩2.5m/s)
+ \n[13시] ☀️ 맑음 27°C (💧50% 🚩3m/s)\n[14시] ☀️ 맑음 28
+ °C (💧45% 🚩3.2m/s)\n[15시] ☀️ 맑음 28°C (💧45% 🚩3.3m/s)
+ \n[16시] ☀️ 맑음 27°C (💧45% 🚩3.4m/s)\n[17시] ☀️ 맑음 
+ 26°C (💧50% 🚩2.5m/s)\n[18시] ☀️ 맑음 25°C (💧55% 🚩1.7m/
+ s)\n[19시] ☀️ 맑음 23°C (💧60% 🚩1.3m/s)\n[20시] ☀️ 맑
+ 음 22°C (💧65% 🚩1.5m/s)\n[21시] ☀️ 맑음 21°C (💧70% 🚩1
+ .5m/s)\n[22시] ☀️ 맑음 20°C (💧75% 🚩1.4m/s)\n[23시] ☀️ 
+ 맑음 20°C (💧80% 🚩1.2m/s)\n\n최종 업데이트: 2026-09-17 20:27
+ :12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:🌡️ None°C/None°C
+SUMMARY:☀️ 17°C/30°C
 DTSTART;VALUE=DATE:20260921
 DTEND;VALUE=DATE:20260922
 UID:20260921@mid
+DESCRIPTION:[오전] ☀️ 맑음 (☔10%)\n[오후] ☀️ 맑음 (☔10
+ %)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:☀️ 18°C/30°C
 DTSTART;VALUE=DATE:20260922
 DTEND;VALUE=DATE:20260923
 UID:20260922@mid
+DESCRIPTION:[오전] ☀️ 맑음 (☔10%)\n[오후] ☀️ 맑음 (☔10
+ %)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:☀️ 18°C/28°C
 DTSTART;VALUE=DATE:20260923
 DTEND;VALUE=DATE:20260924
 UID:20260923@mid
+DESCRIPTION:[오전] ☀️ 맑음 (☔10%)\n[오후] ☀️ 맑음 (☔10
+ %)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:⛅ 18°C/29°C
 DTSTART;VALUE=DATE:20260924
 DTEND;VALUE=DATE:20260925
 UID:20260924@mid
+DESCRIPTION:[오전] ⛅ 구름많음 (☔20%)\n[오후] ⛅ 구름많음 
+ (☔20%)\n\n최종 업데이트: 2026-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:⛅ 17°C/29°C
 DTSTART;VALUE=DATE:20260925
 DTEND;VALUE=DATE:20260926
 UID:20260925@mid
+DESCRIPTION:[종일] ⛅ 구름많음 (☔20%)\n\n최종 업데이트: 202
+ 6-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:⛅ 17°C/26°C
 DTSTART;VALUE=DATE:20260926
 DTEND;VALUE=DATE:20260927
 UID:20260926@mid
+DESCRIPTION:[종일] ⛅ 구름많음 (☔30%)\n\n최종 업데이트: 202
+ 6-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:⛅ 18°C/26°C
 DTSTART;VALUE=DATE:20260927
 DTEND;VALUE=DATE:20260928
 UID:20260927@mid
+DESCRIPTION:[종일] ⛅ 구름많음 (☔30%)\n\n최종 업데이트: 202
+ 6-09-17 20:27:12 (KST)
+LOCATION:삼천동
 END:VEVENT
 END:VCALENDAR
