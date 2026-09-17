@@ -19,7 +19,7 @@ on:
 permissions:
   contents: write
 
-# 서로 다른 워크플로 실행끼리는 겹치지 않지만, 한 실행 안의 5개 fetch job은 병렬로 돕니다.
+# 서로 다른 워크플로 실행은 겹치지 않게 하고, 한 실행 안의 5개 fetch job만 병렬 실행합니다.
 concurrency:
   group: weather-calendar-update
   cancel-in-progress: false
@@ -80,27 +80,17 @@ jobs:
         run: |
           mkdir -p result
 
-          if [ -f weather.ics ]; then
+          # 스크립트가 exit 0으로 끝났을 때만 결과 ICS를 성공 후보로 보관합니다.
+          if [ "$SCRIPT_OUTCOME" = "success" ] && [ -f weather.ics ]; then
             cp weather.ics result/weather.ics
-          fi
-          if [ -f weather_status.json ]; then
-            cp weather_status.json result/weather_status.json
-          fi
-
-          CACHE_COUNT=999
-          COMPLETE=false
-          if [ -f weather_status.json ]; then
-            CACHE_COUNT=$(jq -r '.cache_count // 999' weather_status.json)
-            COMPLETE=$(jq -r '.complete // false' weather_status.json)
           fi
 
           jq -n \
             --argjson attempt "$ATTEMPT" \
             --arg ip "${RUNNER_IP:-unknown}" \
             --arg outcome "$SCRIPT_OUTCOME" \
-            --argjson cache_count "$CACHE_COUNT" \
-            --argjson complete "$COMPLETE" \
-            '{attempt:$attempt, ip:$ip, outcome:$outcome, cache_count:$cache_count, complete:$complete}' \
+            --arg has_ics "$([ -f result/weather.ics ] && echo true || echo false)" \
+            '{attempt:$attempt, ip:$ip, outcome:$outcome, has_ics:($has_ics == "true")}' \
             > result/report.json
 
       - name: Upload attempt result
@@ -112,7 +102,7 @@ jobs:
           retention-days: 2
 
   commit:
-    name: Select best result and commit
+    name: Select result and commit
     needs: fetch
     if: always()
     runs-on: ubuntu-latest
@@ -129,18 +119,17 @@ jobs:
           path: attempts
           merge-multiple: false
 
-      - name: Select fully fresh result
+      - name: Select successful result
         id: select
         shell: bash
         run: |
           echo "### 기상청 API 5개 러너 결과" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Attempt | Runner IP | 스크립트 | 캐시 날짜 수 | 판정 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---:|---|---|---:|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Attempt | Runner IP | 결과 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---:|---|---|" >> "$GITHUB_STEP_SUMMARY"
 
-          BEST_DIR=""
-          BEST_ATTEMPT=""
-          BEST_CACHE=999
+          SELECTED_DIR=""
+          SELECTED_ATTEMPT=""
 
           for DIR in attempts/weather-attempt-*; do
             [ -d "$DIR" ] || continue
@@ -150,42 +139,31 @@ jobs:
             ATTEMPT=$(jq -r '.attempt' "$REPORT")
             IP=$(jq -r '.ip' "$REPORT")
             OUTCOME=$(jq -r '.outcome' "$REPORT")
-            CACHE_COUNT=$(jq -r '.cache_count' "$REPORT")
-            COMPLETE=$(jq -r '.complete' "$REPORT")
+            HAS_ICS=$(jq -r '.has_ics' "$REPORT")
 
             VERDICT="❌ 실패"
-            if [ "$OUTCOME" = "success" ] && [ "$COMPLETE" = "true" ] && \
-               [ -f "$DIR/weather.ics" ] && [ -f "$DIR/weather_status.json" ]; then
-              if [ "$CACHE_COUNT" -eq 0 ]; then
-                VERDICT="✅ 완전 최신"
-              else
-                VERDICT="⚠️ 캐시 사용"
-              fi
-
-              if [ "$CACHE_COUNT" -lt "$BEST_CACHE" ]; then
-                BEST_CACHE="$CACHE_COUNT"
-                BEST_DIR="$DIR"
-                BEST_ATTEMPT="$ATTEMPT"
+            if [ "$OUTCOME" = "success" ] && [ "$HAS_ICS" = "true" ] && [ -f "$DIR/weather.ics" ]; then
+              VERDICT="✅ 성공"
+              # 모든 성공 결과는 같은 검증을 통과했으므로 첫 성공 결과를 선택합니다.
+              if [ -z "$SELECTED_DIR" ]; then
+                SELECTED_DIR="$DIR"
+                SELECTED_ATTEMPT="$ATTEMPT"
               fi
             fi
 
-            echo "| $ATTEMPT | $IP | $OUTCOME | $CACHE_COUNT | $VERDICT |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| $ATTEMPT | $IP | $VERDICT |" >> "$GITHUB_STEP_SUMMARY"
           done
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          if [ -n "$BEST_DIR" ] && [ "$BEST_CACHE" -eq 0 ]; then
-            cp "$BEST_DIR/weather.ics" weather.ics
+          if [ -n "$SELECTED_DIR" ]; then
+            cp "$SELECTED_DIR/weather.ics" weather.ics
             echo "can_commit=true" >> "$GITHUB_OUTPUT"
-            echo "attempt=$BEST_ATTEMPT" >> "$GITHUB_OUTPUT"
-            echo "**Attempt $BEST_ATTEMPT의 완전 최신 결과를 선택했습니다.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "attempt=$SELECTED_ATTEMPT" >> "$GITHUB_OUTPUT"
+            echo "**Attempt $SELECTED_ATTEMPT 결과를 선택했습니다.**" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "can_commit=false" >> "$GITHUB_OUTPUT"
-            if [ -n "$BEST_DIR" ]; then
-              echo "**완전 최신 결과가 없어 기존 weather.ics를 유지합니다. 최선 결과의 캐시 사용 날짜 수: $BEST_CACHE**" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "**5개 러너 모두 유효한 weather.ics 생성에 실패해 기존 파일을 유지합니다.**" >> "$GITHUB_STEP_SUMMARY"
-            fi
+            echo "**5개 러너 모두 검증을 통과하지 못해 기존 weather.ics를 유지합니다.**" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Commit and push weather.ics
@@ -204,8 +182,8 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
-      - name: Fail safely when no fully fresh result exists
+      - name: Fail safely if every runner failed
         if: steps.select.outputs.can_commit != 'true'
         run: |
-          echo "::error::5개 러너에서 완전한 최신 데이터를 얻지 못했습니다. 기존 weather.ics는 변경하지 않았습니다."
+          echo "::error::5개 러너 모두 유효한 날씨 데이터를 만들지 못했습니다. 기존 weather.ics는 변경하지 않았습니다."
           exit 1
