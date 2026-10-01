@@ -310,6 +310,11 @@ def main():
 
     now = datetime.now(SEOUL_TZ)
     today = now.date()
+    # 중기예보는 발표일 기준 D+10까지 제공된다. 새벽에는 전날 발표가
+    # 최신이므로 오늘 기준 D+9까지만 필수이며, 06:30부터 D+10을 요구한다.
+    # API 실패로 범위를 축소하지 않도록 실제 응답 대신 발표 일정으로 계산한다.
+    latest_issue = get_mid_tmfc_candidates(now)[0]
+    forecast_days = (latest_issue.date() + timedelta(days=10) - today).days + 1
     update_ts = now.strftime("%Y-%m-%d %H:%M:%S")
 
     calendar = Calendar()
@@ -350,7 +355,7 @@ def main():
             print(f"::error::단기예보 {date_str}의 새 데이터와 정상 캐시가 모두 없습니다.")
 
     mid_datasets = fetch_mid_datasets(now)
-    for delta in range(4, 11):
+    for delta in range(4, forecast_days):
         target_date = today + timedelta(days=delta)
         date_str = target_date.strftime("%Y%m%d")
         event = None
@@ -380,7 +385,7 @@ def main():
         else:
             print(f"::error::중기예보 {date_str}의 새 데이터와 정상 캐시가 모두 없습니다.")
 
-    expected_dates = {(today + timedelta(days=delta)).strftime("%Y%m%d") for delta in range(11)}
+    expected_dates = {(today + timedelta(days=delta)).strftime("%Y%m%d") for delta in range(forecast_days)}
     missing_dates = sorted(expected_dates - processed_dates)
     if missing_dates:
         print(f"::error::날씨 이벤트가 없는 날짜: {', '.join(missing_dates)}")
