@@ -1,4 +1,5 @@
 name: Build Fold8 YouTube patch bundle
+# Retry after source compatibility fix
 
 on:
   push:
