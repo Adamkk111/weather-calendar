@@ -73,24 +73,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p e2e
-          npm init -y >/dev/null 2>&1
-          npm install apkmirror-downloader@2.0.11 >/dev/null 2>&1
-          cat > e2e/download-youtube.mjs <<'NODE'
-          import { APKMirrorDownloader } from "apkmirror-downloader";
-          const downloader = new APKMirrorDownloader({ outDir: "e2e", overwrite: true });
-          await downloader.download(
-            { org: "google-inc", repo: "youtube" },
-            { version: "21.13.164", type: "apk", outFile: "youtube-21.13.164" }
-          );
-          NODE
-          node e2e/download-youtube.mjs
-          APK="$(find e2e -maxdepth 1 -type f -name 'youtube-21.13.164*.apk' | head -n1)"
-          test -n "$APK"
-          mv "$APK" e2e/youtube.apk
+
+          # APKPure serves the same Google-signed universal/nodpi APK by versionCode.
+          curl -fL --retry 3 \
+            'https://d.apkpure.com/b/APK/com.google.android.youtube?versionCode=1561063732' \
+            -o e2e/youtube.apk
+          test -s e2e/youtube.apk
+          test "$(stat -c%s e2e/youtube.apk)" -gt 170000000
+
+          # Cross-check against APKMirror's published hash for the Google-signed
+          # YouTube 21.13.164 universal/nodpi APK.
+          echo 'c193daf879d36e04886c34dcc44580b1c98c20534165d306c2a04b8025fc3f46  e2e/youtube.apk' | sha256sum -c -
 
           URL="$(curl -fsSL https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url' | head -n1)"
           test -n "$URL"
           curl -fL "$URL" -o e2e/morphe-desktop.jar
+          java -jar e2e/morphe-desktop.jar --version
 
           java -jar e2e/morphe-desktop.jar list-patches -p fold8-patches.mpp > e2e/patch-list.txt
           for P in "Change form factor" "Theme" "Hide ads" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
@@ -117,7 +115,8 @@ jobs:
           ORIG="$(sha256sum e2e/youtube.apk | cut -d' ' -f1)"
           PATCHED="$(sha256sum e2e/youtube-fold8-patched.apk | cut -d' ' -f1)"
           test "$ORIG" != "$PATCHED"
-          echo "E2E_VERIFY_SUCCESS" > e2e/verification.txt
+          sha256sum e2e/youtube.apk e2e/youtube-fold8-patched.apk | tee e2e/hashes.txt
+          echo "E2E_VERIFY_SUCCESS" | tee e2e/verification.txt
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
