@@ -111,7 +111,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s fold8-patches.mpp
-          java -jar e2e/morphe-desktop.jar list-patches -p fold8-patches.mpp > e2e/patch-list.txt
+          java -jar e2e/morphe-desktop.jar list-patches --patches fold8-patches.mpp > e2e/patch-list.txt
           for P in "Change form factor" "Theme" "Hide ads" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
             grep -F "$P" e2e/patch-list.txt >/dev/null
           done
