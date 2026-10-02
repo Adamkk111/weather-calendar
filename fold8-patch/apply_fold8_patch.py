@@ -67,7 +67,7 @@ must_replace(
         try {
             return Utils.getResources().getConfiguration().orientation
                     == Configuration.ORIENTATION_LANDSCAPE;
-        } catch (Throwable t) {
+        } catch (Exception t) {
             Logger.printDebug(() -> "Fold8 auto layout: failed to read orientation", t);
             return false;
         }
@@ -92,7 +92,7 @@ must_replace(
             int widthPx = context.getResources().getDisplayMetrics().widthPixels;
             int heightPx = context.getResources().getDisplayMetrics().heightPixels;
             return Math.min(widthPx, heightPx) >= FOLD8_UNFOLDED_SHORT_SIDE_PX;
-        } catch (Throwable t) {
+        } catch (Exception t) {
             Logger.printDebug(() -> "Fold8 auto layout: failed to detect fold state", t);
             return false;
         }
