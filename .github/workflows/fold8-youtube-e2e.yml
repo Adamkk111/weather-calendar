@@ -1,0 +1,127 @@
+name: Verify Fold8 YouTube patch end to end
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Fold8 branch
+        uses: actions/checkout@v4
+        with:
+          ref: fold8-youtube-patches
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Download official YouTube 21.13.164 APK from APKMirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p e2e
+          npm init -y >/dev/null 2>&1
+          npm install apkmirror-downloader@2.0.11 >/dev/null 2>&1
+          cat > e2e/download-youtube.mjs <<'NODE'
+          import { APKMirrorDownloader } from "apkmirror-downloader";
+          const downloader = new APKMirrorDownloader({ outDir: "e2e", overwrite: true });
+          await downloader.download(
+            { org: "google-inc", repo: "youtube" },
+            {
+              version: "21.13.164",
+              arch: "universal",
+              dpi: "nodpi",
+              type: "apk",
+              outFile: "youtube-21.13.164"
+            }
+          );
+          NODE
+          node e2e/download-youtube.mjs
+          find e2e -maxdepth 1 -type f -printf '%f %s bytes\n'
+          APK="$(find e2e -maxdepth 1 -type f -name 'youtube-21.13.164*.apk' | head -n1)"
+          test -n "$APK"
+          test "$(stat -c%s "$APK")" -gt 100000000
+          mv "$APK" e2e/youtube.apk
+
+      - name: Download latest Morphe Desktop CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(curl -fsSL https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest |
+            jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url' | head -n1)"
+          test -n "$URL"
+          curl -fL "$URL" -o e2e/morphe-desktop.jar
+          java -jar e2e/morphe-desktop.jar --version
+
+      - name: Confirm custom bundle loads
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s fold8-patches.mpp
+          java -jar e2e/morphe-desktop.jar list-patches -p fold8-patches.mpp > e2e/patch-list.txt
+          grep -F "Change form factor" e2e/patch-list.txt
+          grep -F "Wide search bar" e2e/patch-list.txt
+          grep -F "Return YouTube Dislike" e2e/patch-list.txt
+          grep -F "Hide ads" e2e/patch-list.txt
+          grep -F "Hide player buttons" e2e/patch-list.txt
+          grep -F "Toolbar components" e2e/patch-list.txt
+          grep -F "Theme" e2e/patch-list.txt
+          grep -F "GmsCore support" e2e/patch-list.txt
+
+      - name: Patch real YouTube APK with requested Fold8 feature set
+        shell: bash
+        env:
+          MORPHE_DATA_DIR: ${{ github.workspace }}/e2e/morphe-data
+        run: |
+          set -euo pipefail
+          java -jar e2e/morphe-desktop.jar patch             -p fold8-patches.mpp             --exclusive             -e "Change form factor"             -e "Theme"             -e "Hide ads"             -e "Return YouTube Dislike"             -e "Wide search bar"             -e "Hide player buttons"             -e "Toolbar components"             -e "GmsCore support"             --verify-with-sdk             -o e2e/youtube-fold8-patched.apk             -r e2e/result.json             e2e/youtube.apk 2>&1 | tee e2e/patch.log
+
+      - name: Validate patched APK structure and critical code marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s e2e/youtube-fold8-patched.apk
+          unzip -t e2e/youtube-fold8-patched.apk >/dev/null
+          sha256sum e2e/youtube.apk e2e/youtube-fold8-patched.apk | tee e2e/hashes.txt
+          ORIGINAL_HASH="$(sha256sum e2e/youtube.apk | cut -d' ' -f1)"
+          PATCHED_HASH="$(sha256sum e2e/youtube-fold8-patched.apk | cut -d' ' -f1)"
+          test "$ORIGINAL_HASH" != "$PATCHED_HASH"
+          unzip -p e2e/youtube-fold8-patched.apk classes.dex 2>/dev/null | strings | grep -F "Fold8 auto layout" >/dev/null || {
+            echo "Marker not in classes.dex; scanning all dex files..."
+            TMP="$(mktemp -d)"
+            unzip -q e2e/youtube-fold8-patched.apk 'classes*.dex' -d "$TMP"
+            grep -aR -F "Fold8 auto layout" "$TMP" >/dev/null
+          }
+          echo "E2E_VERIFY_SUCCESS" | tee e2e/verification.txt
+
+      - name: Keep verification evidence only
+        if: always()
+        shell: bash
+        run: |
+          rm -f e2e/youtube.apk e2e/youtube-fold8-patched.apk e2e/morphe-desktop.jar
+          rm -rf e2e/morphe-data node_modules
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fold8-youtube-e2e-verification
+          path: |
+            e2e/patch-list.txt
+            e2e/patch.log
+            e2e/result.json
+            e2e/hashes.txt
+            e2e/verification.txt
+          if-no-files-found: warn
