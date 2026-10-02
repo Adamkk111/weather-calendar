@@ -1,7 +1,7 @@
 Galaxy Fold8 Ultra - minimal patch selection
 
 [ON] Theme / AMOLED (#000000)
-[ON] Hide ads (Shorts ads / disclosure / overlay filtering)
+[ON] Hide ads (Shorts ads / disclosure / overlay filtering)\n[ON] Shorts components (Shorts stickers hidden by default)
 [ON] Return YouTube Dislike
 [ON] Wide search bar
 [ON] Hide player buttons -> Hide cast button in player
