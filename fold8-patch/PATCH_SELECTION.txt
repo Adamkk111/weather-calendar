@@ -1,0 +1,16 @@
+Galaxy Fold8 Ultra - minimal patch selection
+
+[ON] Theme / AMOLED (#000000)
+[ON] Hide ads (Shorts ads / disclosure / overlay filtering)
+[ON] Return YouTube Dislike
+[ON] Wide search bar
+[ON] Hide player buttons -> Hide cast button in player
+[ON] Toolbar components -> Hide cast button in toolbar
+[ON] Change form factor -> DEFAULT (required for Fold8 auto logic)
+[ON if non-root] GmsCore support
+
+Fold8 auto layout:
+- folded portrait = stock
+- folded landscape = stock
+- unfolded portrait = PHONE, widthDp <= 480
+- unfolded landscape = TABLET, widthDp >= 600
