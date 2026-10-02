@@ -112,7 +112,7 @@ jobs:
           set -euo pipefail
           test -s fold8-patches.mpp
           java -jar e2e/morphe-desktop.jar list-patches --patches fold8-patches.mpp > e2e/patch-list.txt
-          for P in "Change form factor" "Theme" "Hide ads" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
+          for P in "Change form factor" "Theme" "Hide ads" "Shorts components" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
             grep -F "$P" e2e/patch-list.txt >/dev/null
           done
 
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          java -jar e2e/morphe-desktop.jar patch             -p fold8-patches.mpp             --exclusive             -e "Change form factor"             -e "Theme"             -e "Hide ads"             -e "Return YouTube Dislike"             -e "Wide search bar"             -e "Hide player buttons"             -e "Toolbar components"             -e "GmsCore support"             -o e2e/youtube-fold8-patched.apk             -r e2e/result.json             e2e/youtube.apk 2>&1 | tee e2e/patch.log
+          java -jar e2e/morphe-desktop.jar patch             -p fold8-patches.mpp             --exclusive             -e "Change form factor"             -e "Theme"             -e "Hide ads"             -e "Shorts components"             -e "Return YouTube Dislike"             -e "Wide search bar"             -e "Hide player buttons"             -e "Toolbar components"             -e "GmsCore support"             -o e2e/youtube-fold8-patched.apk             -r e2e/result.json             e2e/youtube.apk 2>&1 | tee e2e/patch.log
 
       - name: Validate patched APK
         shell: bash
