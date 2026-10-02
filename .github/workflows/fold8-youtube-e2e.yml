@@ -2,6 +2,11 @@ name: Verify Fold8 YouTube patch end to end
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fold8-youtube-patches
+    paths:
+      - '.github/workflows/fold8-youtube-e2e.yml'
 
 permissions:
   contents: read
