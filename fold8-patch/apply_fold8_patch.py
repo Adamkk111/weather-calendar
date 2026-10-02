@@ -226,5 +226,14 @@ s = s.replace(
     1,
 )
 
+# Enable the requested wide search bar by default in the extension.
+settings = Path("upstream/extensions/shared/src/main/java/app/morphe/extension/youtube/settings/Settings.java")
+settings_text = settings.read_text(encoding="utf-8")
+old_wide = 'public static final BooleanSetting ENABLE_WIDE_SEARCH_BAR = new BooleanSetting("revanced_enable_wide_search_bar", FALSE, true);'
+new_wide = 'public static final BooleanSetting ENABLE_WIDE_SEARCH_BAR = new BooleanSetting("revanced_enable_wide_search_bar", TRUE, true);'
+if old_wide not in settings_text:
+    raise SystemExit("Expected wide search bar default not found")
+settings.write_text(settings_text.replace(old_wide, new_wide, 1), encoding="utf-8")
+
 p.write_text(s, encoding="utf-8")
 print("Applied Fold8 Ultra auto-layout modification to", p)
