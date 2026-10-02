@@ -74,9 +74,13 @@ jobs:
           set -euo pipefail
           mkdir -p e2e
 
-          # APKPure serves the same Google-signed universal/nodpi APK by versionCode.
+          # APKMirror direct download URL resolved from the verified 21.13.164
+          # universal/nodpi download page. Keep the browser UA + referer because
+          # APKMirror protects direct asset requests against hotlinking.
           curl -fL --retry 3 \
-            'https://d.apkpure.com/b/APK/com.google.android.youtube?versionCode=1561063732' \
+            -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36' \
+            -e 'https://www.apkmirror.com/apk/google-inc/youtube/youtube-21-13-164-release/youtube-21-13-164-4-android-apk-download/' \
+            'https://www.apkmirror.com/apk/google-inc/youtube/youtube-21-13-164-release/youtube-21-13-164-4-android-apk-download/download/?forcebaseapk=true&key=1681cd9d7cff92584384f5b690525cf154c9d56a' \
             -o e2e/youtube.apk
           test -s e2e/youtube.apk
           test "$(stat -c%s e2e/youtube.apk)" -gt 170000000
