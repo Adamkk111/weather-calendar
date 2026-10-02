@@ -66,6 +66,59 @@ jobs:
           }
           JSON
 
+      - name: E2E verify on real YouTube 21.13.164 APK
+        shell: bash
+        env:
+          MORPHE_DATA_DIR: ${{ github.workspace }}/e2e/morphe-data
+        run: |
+          set -euo pipefail
+          mkdir -p e2e
+          npm init -y >/dev/null 2>&1
+          npm install apkmirror-downloader@2.0.11 >/dev/null 2>&1
+          cat > e2e/download-youtube.mjs <<'NODE'
+          import { APKMirrorDownloader } from "apkmirror-downloader";
+          const downloader = new APKMirrorDownloader({ outDir: "e2e", overwrite: true });
+          await downloader.download(
+            { org: "google-inc", repo: "youtube" },
+            { version: "21.13.164", type: "apk", outFile: "youtube-21.13.164" }
+          );
+          NODE
+          node e2e/download-youtube.mjs
+          APK="$(find e2e -maxdepth 1 -type f -name 'youtube-21.13.164*.apk' | head -n1)"
+          test -n "$APK"
+          mv "$APK" e2e/youtube.apk
+
+          URL="$(curl -fsSL https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url' | head -n1)"
+          test -n "$URL"
+          curl -fL "$URL" -o e2e/morphe-desktop.jar
+
+          java -jar e2e/morphe-desktop.jar list-patches -p fold8-patches.mpp > e2e/patch-list.txt
+          for P in "Change form factor" "Theme" "Hide ads" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
+            grep -F "$P" e2e/patch-list.txt >/dev/null
+          done
+
+          java -jar e2e/morphe-desktop.jar patch \
+            -p fold8-patches.mpp \
+            --exclusive \
+            -e "Change form factor" \
+            -e "Theme" \
+            -e "Hide ads" \
+            -e "Return YouTube Dislike" \
+            -e "Wide search bar" \
+            -e "Hide player buttons" \
+            -e "Toolbar components" \
+            -e "GmsCore support" \
+            -o e2e/youtube-fold8-patched.apk \
+            -r e2e/result.json \
+            e2e/youtube.apk 2>&1 | tee e2e/patch.log
+
+          test -s e2e/youtube-fold8-patched.apk
+          unzip -t e2e/youtube-fold8-patched.apk >/dev/null
+          ORIG="$(sha256sum e2e/youtube.apk | cut -d' ' -f1)"
+          PATCHED="$(sha256sum e2e/youtube-fold8-patched.apk | cut -d' ' -f1)"
+          test "$ORIG" != "$PATCHED"
+          echo "E2E_VERIFY_SUCCESS" > e2e/verification.txt
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
