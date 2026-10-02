@@ -1,0 +1,150 @@
+name: E2E Verify Fold8 YouTube
+
+on:
+  push:
+    branches:
+      - fold8-youtube-patches
+    paths:
+      - '.github/workflows/fold8-e2e-helper.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Fold8 branch
+        uses: actions/checkout@v4
+        with:
+          ref: fold8-youtube-patches
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch exact original YouTube APK with provider fallback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_APK_CACHE: 'false'
+          HTTP_RETRIES: '3'
+          HTTP_RETRY_BASE_SECONDS: '2'
+          HTTP_RETRY_MAX_SECONDS: '20'
+          APKMIRROR_REQUEST_INTERVAL_SECONDS: '3.5'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p e2e
+          git clone --depth 1 https://github.com/almeki876/Morphe-AutoBuilds.git helper
+          pip install -r helper/requirements.txt
+
+          python3 - <<'PY'
+          import os
+          import shutil
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd()
+          helper = root / "helper"
+          sys.path.insert(0, str(helper))
+          os.chdir(helper)
+
+          from src import downloader, providers
+          from src.versioning import VersionCandidate
+
+          wanted = [VersionCandidate(name="21.13.164", code="1561063732")]
+          errors = []
+          result = None
+
+          for provider in providers.download_priority("youtube"):
+              try:
+                  print(f"Trying provider: {provider}", flush=True)
+                  apk, version = downloader.download_platform(
+                      "youtube",
+                      provider,
+                      cli="unused.jar",
+                      patches="unused.mpp",
+                      arch="universal",
+                      version_candidates=wanted,
+                      require_japanese=False,
+                  )
+                  if apk:
+                      result = (apk, version, provider)
+                      break
+              except Exception as exc:
+                  errors.append(f"{provider}: {type(exc).__name__}: {exc}")
+                  print(errors[-1], flush=True)
+
+          if result is None:
+              raise SystemExit("All providers failed: " + " | ".join(errors))
+
+          apk, version, provider = result
+          out = root / "e2e" / "youtube.apk"
+          shutil.copy2(apk, out)
+          print(f"Downloaded {version} via {provider}: {out} ({out.stat().st_size} bytes)")
+          PY
+
+          test -s e2e/youtube.apk
+          test "$(stat -c%s e2e/youtube.apk)" -eq 182186576
+          echo 'c193daf879d36e04886c34dcc44580b1c98c20534165d306c2a04b8025fc3f46  e2e/youtube.apk' | sha256sum -c -
+
+      - name: Download Morphe Desktop CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(curl -fsSL https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url' | head -n1)"
+          test -n "$URL"
+          curl -fL "$URL" -o e2e/morphe-desktop.jar
+          java -jar e2e/morphe-desktop.jar --version
+
+      - name: Validate custom patch bundle contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s fold8-patches.mpp
+          java -jar e2e/morphe-desktop.jar list-patches -p fold8-patches.mpp > e2e/patch-list.txt
+          for P in "Change form factor" "Theme" "Hide ads" "Return YouTube Dislike" "Wide search bar" "Hide player buttons" "Toolbar components" "GmsCore support"; do
+            grep -F "$P" e2e/patch-list.txt >/dev/null
+          done
+
+      - name: Patch real YouTube APK
+        env:
+          MORPHE_DATA_DIR: ${{ github.workspace }}/e2e/morphe-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -jar e2e/morphe-desktop.jar patch             -p fold8-patches.mpp             --exclusive             -e "Change form factor"             -e "Theme"             -e "Hide ads"             -e "Return YouTube Dislike"             -e "Wide search bar"             -e "Hide player buttons"             -e "Toolbar components"             -e "GmsCore support"             -o e2e/youtube-fold8-patched.apk             -r e2e/result.json             e2e/youtube.apk 2>&1 | tee e2e/patch.log
+
+      - name: Validate patched APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s e2e/youtube-fold8-patched.apk
+          unzip -t e2e/youtube-fold8-patched.apk >/dev/null
+          ORIG="$(sha256sum e2e/youtube.apk | cut -d' ' -f1)"
+          PATCHED="$(sha256sum e2e/youtube-fold8-patched.apk | cut -d' ' -f1)"
+          test "$ORIG" != "$PATCHED"
+          sha256sum e2e/youtube.apk e2e/youtube-fold8-patched.apk | tee e2e/hashes.txt
+          echo E2E_VERIFY_SUCCESS | tee e2e/verification.txt
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fold8-e2e-evidence
+          path: |
+            e2e/patch-list.txt
+            e2e/patch.log
+            e2e/result.json
+            e2e/hashes.txt
+            e2e/verification.txt
+          if-no-files-found: warn
