@@ -2,16 +2,16 @@ import os
 import sys
 import requests
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from icalendar import Calendar, Event
 
 # --- [1. 설정] ---
-NX = int(os.environ.get('KMA_NX', 60))
-NY = int(os.environ.get('KMA_NY', 127))
-LOCATION_NAME = os.environ.get('LOCATION_NAME', '내 위치')
-REG_ID_TEMP = os.environ.get('REG_ID_TEMP', '11B10101')
-REG_ID_LAND = os.environ.get('REG_ID_LAND', '11B00000')
-API_KEY = os.environ['KMA_API_KEY']
+NX = int(os.environ.get('KMA_NX') or 63)
+NY = int(os.environ.get('KMA_NY') or 88)
+LOCATION_NAME = os.environ.get('LOCATION_NAME') or '삼천동'
+REG_ID_TEMP = os.environ.get('REG_ID_TEMP') or '11F10201'
+REG_ID_LAND = os.environ.get('REG_ID_LAND') or '11F10000'
+API_KEY = os.environ.get('KMA_API_KEY', '').strip()
 
 def get_weather_info(sky, pty):
     sky, pty = str(sky), str(pty)
@@ -116,12 +116,17 @@ def event_from_cache(raw_ical):
         cal = Calendar.from_ical(wrapped)
         for component in cal.walk():
             if component.name == 'VEVENT':
+                if not component.get('dtstamp'):
+                    component.add('dtstamp', datetime.now(timezone.utc))
                 return component
-    except:
-        pass
+    except Exception as exc:
+        print(f'[CACHE WARN] {type(exc).__name__}: {exc}')
     return None
 
 def main():
+    if not API_KEY:
+        print('::error::KMA_API_KEY GitHub Secret이 설정되지 않았습니다.')
+        sys.exit(2)
     seoul_tz = pytz.timezone('Asia/Seoul')
     now = datetime.now(seoul_tz)
     today_str = now.strftime('%Y%m%d')
@@ -130,9 +135,13 @@ def main():
     today_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
     short_end_str = (today_dt + timedelta(days=3)).strftime('%Y%m%d')  # D+0~D+3 단기
     mid_start_dt  = today_dt + timedelta(days=4)                        # D+4부터 중기
-    mid_end_dt    = today_dt + timedelta(days=10)                       # D+10까지
+    mid_end_dt    = get_tmfc_candidates(now)[0] + timedelta(days=10)  # 최신 중기발표 D+10까지
 
     cal = Calendar()
+    cal.add('prodid', '-//Adamkk111//KMA Weather Calendar//KO')
+    cal.add('version', '2.0')
+    cal.add('calscale', 'GREGORIAN')
+    cal.add('method', 'PUBLISH')
     cal.add('X-WR-CALNAME', '기상청 날씨')
     cal.add('X-WR-TIMEZONE', 'Asia/Seoul')
     processed_dates = set()
@@ -194,6 +203,7 @@ def main():
                 has_future_data = True
         if not has_future_data: continue
         event = Event()
+        event.add('dtstamp', datetime.now(timezone.utc))
         event.add('summary', f"{rep_emoji} {t_min}°C/{t_max}°C")
         event.add('location', LOCATION_NAME)
         desc.append(f"\n최종 업데이트: {update_ts} (KST)")
@@ -277,7 +287,8 @@ def main():
                 mid_desc.append(f"\n최종 업데이트: {update_ts} (KST)")
 
                 event = Event()
-                event.add('summary', f"{get_mid_emoji(wf_rep)} {t_min}/{t_max}°C")
+                event.add('dtstamp', datetime.now(timezone.utc))
+                event.add('summary', f"{get_mid_emoji(wf_rep)} {t_min}°C/{t_max}°C")
                 event.add('location', LOCATION_NAME)
                 event.add('description', "\n".join(mid_desc))
                 event.add('dtstart', cur_dt.date())
@@ -295,6 +306,13 @@ def main():
         cur_dt += timedelta(days=1)
 
     print("최종 processed_dates:", sorted(processed_dates))
+    expected_dates = {(today_dt + timedelta(days=i)).strftime('%Y%m%d')
+                      for i in range((mid_end_dt.date() - today_dt.date()).days + 1)}
+    missing_dates = sorted(expected_dates - processed_dates)
+    if missing_dates:
+        print('::error::날씨 데이터가 없는 날짜: ' + ', '.join(missing_dates))
+        print('[ABORT] 기존 weather.ics를 덮어쓰지 않습니다.')
+        sys.exit(1)
     with open('weather.ics', 'wb') as f:
         f.write(cal.to_ical())
 
