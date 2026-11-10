@@ -1,22 +1,27 @@
 name: Update Weather ICS
 
 on:
-#  schedule:
-#    - cron: '15 17,20,23,2,5,8,11,14 * * *'
+  schedule:
+    # KST 02:21, 05:21, 08:21, 11:21, 14:21, 17:21, 20:21, 23:21
+    - cron: '21 17,20,23,2,5,8,11,14 * * *'
   repository_dispatch:
     types: [update-weather-ics]
 
   push:
     paths:
       - 'update_calendar.py'
+      - 'requirements.txt'
+      - '.github/workflows/update.yml'
     branches:
       - main
   workflow_dispatch:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
+
+concurrency:
+  group: weather-calendar-update
+  cancel-in-progress: false
 
 jobs:
   # 여러 러너에서 동시에 시도합니다. 러너마다 다른 IP를 배정받기 때문에,
@@ -24,6 +29,7 @@ jobs:
   # 안 막힌 IP를 받을 확률이 올라갑니다. (같은 authKey, 추가 인프라 불필요)
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     strategy:
       fail-fast: false
       matrix:
@@ -40,7 +46,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
-        run: pip install requests pytz icalendar
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
 
       - name: Log runner IP
         id: getip
@@ -93,6 +99,7 @@ jobs:
   # fetch의 병렬 시도 중 성공한 게 하나라도 있으면 그걸로 커밋하고,
   # 셋 다 실패했으면 기존 파일 그대로 두고(=변경 없음) 잡 실패로 표시합니다.
   commit:
+    timeout-minutes: 8
     needs: fetch
     if: always()
     runs-on: ubuntu-latest
